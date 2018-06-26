@@ -6,8 +6,16 @@ import re
 import time
 import json
 import csv
+import xml.etree.cElementTree as ET
 
 PROGRAM = 'blastn&MEGABLAST=on'
+
+# SORT RESULTS
+sort_kw = 'bit-score'
+
+# high to low
+sort_descending = True
+
 
 # DATABASE = 'nt+nr'
 DATABASE = 'nt'
@@ -95,6 +103,7 @@ def name_dna(filename):
 
     name = ''
     dna = ''
+    dna_orig = ''
 
     with open(filename, 'r') as in_file:
         for line in in_file:
@@ -102,19 +111,46 @@ def name_dna(filename):
 
             if len(line) > 0 and line[0] == '>':
                 if dna != '':
-                    yield name, dna
+                    yield name, dna, dna_orig.rstrip('\n')
                 dna = ''
+                dna_orig = ''
                 name = line
             else:
                 dna += line
+                dna_orig += line + '\n'
 
     if dna != '':
-        yield name,dna
+        yield name,dna,dna_orig.rstrip('\n')
 
 def extract_best_dna(xml_string):
     # return name, accession
-    # TODO
-    return 'Duganella sp. c1 16S ribosomal RNA gene, partial sequence', 'JQ745646'
+    print(xml_string)
+
+    hit_dicts = []
+
+    root = ET.fromstring(xml_string)
+    hits = root.find('BlastOutput_iterations').find('Iteration').find('Iteration_hits').findall('Hit')
+
+    # generate list of dictionaries containing several important information about results
+    for hit in hits:
+        hit_dict = {}
+        hit_dict['accession'] = hit.find('Hit_accession').text
+        hit_dict['name'] = hit.find('Hit_def').text
+        hit_dict['id'] = hit.find('Hit_id').text
+
+        scores = hit.find('Hit_hsps').find('Hsp')
+
+        hit_dict['bit-score'] = float(scores.find('Hsp_bit-score').text)
+        hit_dict['score'] = int(scores.find('Hsp_score').text)
+        hit_dict['identity'] = int(scores.find('Hsp_identity').text)
+        hit_dict['hit-from'] = int(scores.find('Hsp_hit-from').text)
+        hit_dict['hit-to'] = int(scores.find('Hsp_hit-to').text)
+        hit_dicts.append(hit_dict)
+
+    # sorting list
+    hit_dicts = sorted(hit_dicts, key=lambda k: k[sort_kw], reverse = sort_descending)
+
+    return hit_dicts[0]
 
 def get_complete_dna(hit_accession):
     # hit accession is code. e.g.: JQ745646
@@ -138,6 +174,17 @@ def get_complete_dna(hit_accession):
 
     return name, dna
 
+def test_xml_parser():
+    xml_str = ''
+    with open('test.xml','r') as f:
+        xml_str = f.read()
+
+    name, accession = extract_best_dna(xml_str)
+
+    print(name)
+    print(accession)
+
+
 def main():
 
     parser = argparse.ArgumentParser(description='Process Options.')
@@ -145,12 +192,11 @@ def main():
     parser.add_argument('-o','--output', type=str, help='output filename', required=True)
     args = parser.parse_args()
 
-
     retry_count = 20
 
     table = []
 
-    for name, dna in name_dna(args.input):
+    for i,(name, dna, dna_orig) in enumerate(name_dna(args.input)):
         print(name)
         print(dna)
 
@@ -177,11 +223,12 @@ def main():
         res = get_results(rid)
 
         # extract best dna -> hit_accession
-        a_name, hit_accession = extract_best_dna(res)
-        c_name, c_dna = get_complete_dna(hit_accession)
-        table.append([name, dna, c_name, c_dna])
+        hit = extract_best_dna(res)
+        c_name, c_dna = get_complete_dna( hit['accession'] )
+        table.append([name, dna_orig, c_name, c_dna])
+        # remove this
 
-    with open("output.csv", "wb") as f:
+    with open(args.output, 'w') as f:
         writer = csv.writer(f)
         writer.writerows(table)
 
