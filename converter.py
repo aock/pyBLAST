@@ -113,6 +113,7 @@ def name_dna(filename):
 
 def extract_best_dna(xml_string):
     # return name, accession
+    # TODO
     return 'Duganella sp. c1 16S ribosomal RNA gene, partial sequence', 'JQ745646'
 
 def get_complete_dna(hit_accession):
@@ -122,9 +123,6 @@ def get_complete_dna(hit_accession):
     request = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=nuccore&term=%s&usehistory=y&retmode=json' % hit_accession
     response = requests.get(request)
     data = response.json()
-
-    print(data)
-    print(data['header'])
 
     webenv = data['esearchresult']['webenv']
     query_key = data['esearchresult']['querykey']
@@ -162,7 +160,6 @@ def main():
         # wait for search to complete
         time.sleep(et)
 
-
         counter = 0
         status = 0
         while status != 3:
@@ -177,14 +174,11 @@ def main():
                 time.sleep(et)
                 counter = 0
 
-
         res = get_results(rid)
 
         # extract best dna -> hit_accession
         a_name, hit_accession = extract_best_dna(res)
-
         c_name, c_dna = get_complete_dna(hit_accession)
-
         table.append([name, dna, c_name, c_dna])
 
     with open("output.csv", "wb") as f:
