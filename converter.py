@@ -16,6 +16,15 @@ sort_kw = 'bit-score'
 # high to low
 sort_descending = True
 
+# avoid words
+avoiding_words = ['complete genome']
+
+# score words (TODO Regex)
+score_words = {
+    'complete genome' : 0.1,
+    '16S' : 1.5
+}
+
 
 # DATABASE = 'nt+nr'
 DATABASE = 'nt'
@@ -124,7 +133,6 @@ def name_dna(filename):
 
 def extract_best_dna(xml_string):
     # return name, accession
-    print(xml_string)
 
     hit_dicts = []
 
@@ -136,6 +144,15 @@ def extract_best_dna(xml_string):
         hit_dict = {}
         hit_dict['accession'] = hit.find('Hit_accession').text
         hit_dict['name'] = hit.find('Hit_def').text
+
+        skip = False
+        for avoid_word in avoiding_words:
+            if avoid_word in hit_dict['name']:
+                skip = True
+
+        if skip:
+            continue
+
         hit_dict['id'] = hit.find('Hit_id').text
 
         scores = hit.find('Hit_hsps').find('Hsp')
@@ -154,23 +171,27 @@ def extract_best_dna(xml_string):
 
 def get_complete_dna(hit_accession):
     # hit accession is code. e.g.: JQ745646
-    'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=nuccore&term=JQ745646&usehistory=y'
 
-    request = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=nuccore&term=%s&usehistory=y&retmode=json' % hit_accession
-    response = requests.get(request)
-    data = response.json()
+    name = 'bla'
+    dna = 'bla'
 
-    webenv = data['esearchresult']['webenv']
-    query_key = data['esearchresult']['querykey']
+    while name[0] != '>':
 
-    request = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&query_key=%s&rettype=fasta&retmode=text&WebEnv=%s' % (query_key, webenv)
-    response = requests.get(request)
+        request = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=nuccore&term=%s&usehistory=y&retmode=json' % hit_accession
+        response = requests.get(request)
+        data = response.json()
 
-    fasta = response.text
+        webenv = data['esearchresult']['webenv']
+        query_key = data['esearchresult']['querykey']
 
-    res = fasta.split('\n', 1)
-    name = res[0]
-    dna = res[1]
+        request = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&query_key=%s&rettype=fasta&retmode=text&WebEnv=%s' % (query_key, webenv)
+        response = requests.get(request)
+
+        fasta = response.text
+
+        res = fasta.split('\n', 1)
+        name = res[0]
+        dna = res[1]
 
     return name, dna
 
@@ -192,13 +213,12 @@ def main():
     parser.add_argument('-o','--output', type=str, help='output filename', required=True)
     args = parser.parse_args()
 
-    retry_count = 20
+    retry_count = 40
 
     table = []
 
     for i,(name, dna, dna_orig) in enumerate(name_dna(args.input)):
         print(name)
-        print(dna)
 
         # first get request id with dna sequence
         rid, et = get_rid(dna)
@@ -210,12 +230,10 @@ def main():
         status = 0
         while status != 3:
             time.sleep(5)
-            print("fetch result try: " + str(counter))
             status = check_status(rid)
             counter += 1
 
             if counter >= retry_count:
-                print("retry")
                 rid, et = get_rid(dna)
                 time.sleep(et)
                 counter = 0
@@ -223,10 +241,21 @@ def main():
         res = get_results(rid)
 
         # extract best dna -> hit_accession
-        hit = extract_best_dna(res)
-        c_name, c_dna = get_complete_dna( hit['accession'] )
-        table.append([name, dna_orig, c_name, c_dna])
-        # remove this
+        try:
+            hit = extract_best_dna(res)
+
+            print("best hit:")
+            print(hit)
+            c_name, c_dna = get_complete_dna( hit['accession'] )
+            table.append([name,
+                         dna_orig,
+                         hit['accession'],
+                         c_name,
+                         c_dna])
+        except:
+            with open('error_'+name+'.xml','w') as f:
+                f.write(res)
+            print("error parsing xml")
 
     with open(args.output, 'w') as f:
         writer = csv.writer(f)
