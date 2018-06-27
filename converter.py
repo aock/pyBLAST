@@ -218,44 +218,48 @@ def main():
     table = []
 
     for i,(name, dna, dna_orig) in enumerate(name_dna(args.input)):
-        print(name)
 
-        # first get request id with dna sequence
-        rid, et = get_rid(dna)
+        while True:
+            print(name)
 
-        # wait for search to complete
-        time.sleep(et)
+            # first get request id with dna sequence
+            rid, et = get_rid(dna)
 
-        counter = 0
-        status = 0
-        while status != 3:
-            time.sleep(5)
-            status = check_status(rid)
-            counter += 1
+            # wait for search to complete
+            time.sleep(et)
 
-            if counter >= retry_count:
-                rid, et = get_rid(dna)
-                time.sleep(et)
-                counter = 0
+            counter = 0
+            status = 0
+            while status != 3:
+                time.sleep(5)
+                status = check_status(rid)
+                counter += 1
 
-        res = get_results(rid)
+                if counter >= retry_count:
+                    rid, et = get_rid(dna)
+                    time.sleep(et)
+                    counter = 0
 
-        # extract best dna -> hit_accession
-        try:
-            hit = extract_best_dna(res)
+            res = get_results(rid)
 
-            print("best hit:")
-            print(hit)
-            c_name, c_dna = get_complete_dna( hit['accession'] )
-            table.append([name,
-                         dna_orig,
-                         hit['accession'],
-                         c_name,
-                         c_dna])
-        except:
-            with open('error_'+name+'.xml','w') as f:
-                f.write(res)
-            print("error parsing xml")
+            # extract best dna -> hit_accession
+            try:
+                hit = extract_best_dna(res)
+
+                print("best hit:")
+                print(hit)
+                c_name, c_dna = get_complete_dna( hit['accession'] )
+                table.append([name,
+                            dna_orig,
+                            hit['accession'],
+                            c_name,
+                            c_dna])
+                break
+            except:
+
+                with open('error_'+name+'.xml','w') as f:
+                    f.write(res)
+                print("error parsing xml")
 
     with open(args.output, 'w') as f:
         writer = csv.writer(f)
