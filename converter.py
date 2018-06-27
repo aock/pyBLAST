@@ -74,10 +74,7 @@ def get_rid( dna_seq ):
     et_match = prog_et.search(response.text)
 
     rid = rid_match.group(1)
-    print("rid: " + rid)
-
     et = et_match.group(1)
-    print("estimated time: " + et)
 
     return rid, int(et)
 
@@ -87,19 +84,14 @@ def check_status( rid ):
     response = requests.get(request)
 
     if prog_status_ready.search(response.text):
-        print("ready to fetch!")
         return 3
     elif prog_status_waiting.search(response.text):
-        print("waiting...")
         return 0
     elif prog_status_failed.search(response.text):
-        print("failed!")
         return 1
     elif prog_status_unknown.search(response.text):
-        print("search expired!")
         return 2
     else:
-        print("No regex hits found?")
         return 4
 
 def get_results( rid ):
@@ -217,10 +209,16 @@ def main():
 
     table = []
 
-    for i,(name, dna, dna_orig) in enumerate(name_dna(args.input)):
+
+    input_data = [(name,dna,dna_orig) for name, dna, dna_orig in name_dna(args.input) ]
+
+
+
+    for i,(name, dna, dna_orig) in enumerate(input_data):
+
+        print(str(i) + '/' + str(len(input_data)) + ': ' + name)
 
         while True:
-            print(name)
 
             # first get request id with dna sequence
             rid, et = get_rid(dna)
@@ -245,9 +243,6 @@ def main():
             # extract best dna -> hit_accession
             try:
                 hit = extract_best_dna(res)
-
-                print("best hit:")
-                print(hit)
                 c_name, c_dna = get_complete_dna( hit['accession'] )
                 table.append([name,
                             dna_orig,
@@ -256,7 +251,6 @@ def main():
                             c_dna])
                 break
             except:
-
                 with open('error_'+name+'.xml','w') as f:
                     f.write(res)
                 print("error parsing xml")
