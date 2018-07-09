@@ -17,12 +17,14 @@ sort_kw = 'bit-score'
 sort_descending = True
 
 # avoid words
-avoiding_words = ['complete genome']
+avoiding_words = ['[Cc]omplete genome',
+    '[Uu]ncultured']
 
 # score words (TODO Regex)
 score_words = {
     'complete genome' : 0.1,
-    '16S' : 1.5
+    '16S.*RNA': 1.5,
+    '[Uu]ncultured': 0.0
 }
 
 
@@ -64,7 +66,6 @@ pattern_web_env = r'<WebEnv>(\S+)<\/WebEnv>'
 
 
 def get_rid( dna_seq ):
-
 
     content = 'CMD=Put&PROGRAM=%s&DATABASE=%s&QUERY=%s' % (PROGRAM, DATABASE, dna_seq)
     request = base_uri + '?' + content
@@ -137,9 +138,12 @@ def extract_best_dna(xml_string):
         hit_dict['accession'] = hit.find('Hit_accession').text
         hit_dict['name'] = hit.find('Hit_def').text
 
+        # AVOID
         skip = False
         for avoid_word in avoiding_words:
-            if avoid_word in hit_dict['name']:
+            m = re.search(avoid_word, hit_dict['name'])
+            if m is not None:
+                print("found " + avoid_word + " in " +  hit_dict['name'])
                 skip = True
 
         if skip:
@@ -154,10 +158,19 @@ def extract_best_dna(xml_string):
         hit_dict['identity'] = int(scores.find('Hsp_identity').text)
         hit_dict['hit-from'] = int(scores.find('Hsp_hit-from').text)
         hit_dict['hit-to'] = int(scores.find('Hsp_hit-to').text)
+
+        # SCORE
+        hit_dict['own_score'] = hit_dict[sort_kw]
+
+        for k,v in score_words.items():
+            m = re.search(k, hit_dict['name'])
+            if m is not None:
+                hit_dict['own_score'] *= v
+
         hit_dicts.append(hit_dict)
 
     # sorting list
-    hit_dicts = sorted(hit_dicts, key=lambda k: k[sort_kw], reverse = sort_descending)
+    hit_dicts = sorted(hit_dicts, key=lambda k: k['own_score'], reverse = sort_descending)
 
     return hit_dicts[0]
 
@@ -197,6 +210,13 @@ def test_xml_parser():
     print(name)
     print(accession)
 
+def save_response(res):
+    with open('test.xml','w') as f:
+        f.write(res)
+
+def read_response():
+    with open('test.xml','r') as f:
+        return f.read()
 
 def main():
 
@@ -240,6 +260,14 @@ def main():
 
             res = get_results(rid)
 
+            # only debug. comment this
+            # save xml response
+            # save_response(res)
+            # print('saved')
+            # exit()
+            # read xml response
+            # res = read_response()
+
             # extract best dna -> hit_accession
             try:
                 hit = extract_best_dna(res)
@@ -251,7 +279,7 @@ def main():
                             c_dna])
                 break
             except:
-                with open('error_'+name+'.xml','w') as f:
+                with open('error/error_'+name+'.xml','w') as f:
                     f.write(res)
                 print("error parsing xml")
 
