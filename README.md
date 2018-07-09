@@ -37,3 +37,6 @@ CACAGTCGAACGGC...
 >unknown_name_2
 ...
 ```
+
+"conv.csv" is a CSV-File with some more information:
+
