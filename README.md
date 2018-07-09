@@ -39,4 +39,8 @@ CACAGTCGAACGGC...
 ```
 
 "conv.csv" is a CSV-File with some more information:
-
+```
+unknown_name_1,unknown_dna_sequence_1,found_name_1,complete_dna_1,accession,own_score,bit-score,score,identity,hit-from,hit-to
+unknown_name_2,unknown_dna_sequence_2,found_name_2,complete_dna_2,accession,own_score,bit-score,score,identity,hit-from,hit-to
+...
+```
