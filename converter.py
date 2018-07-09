@@ -7,6 +7,7 @@ import time
 import json
 import csv
 import xml.etree.cElementTree as ET
+import os
 
 PROGRAM = 'blastn&MEGABLAST=on'
 
@@ -18,7 +19,8 @@ sort_descending = True
 
 # avoid words
 avoiding_words = ['[Cc]omplete genome',
-    '[Uu]ncultured']
+    '[Uu]ncultured',
+    '[Uu]nknown']
 
 # score words (TODO Regex)
 score_words = {
@@ -143,7 +145,6 @@ def extract_best_dna(xml_string):
         for avoid_word in avoiding_words:
             m = re.search(avoid_word, hit_dict['name'])
             if m is not None:
-                print("found " + avoid_word + " in " +  hit_dict['name'])
                 skip = True
 
         if skip:
@@ -196,7 +197,8 @@ def get_complete_dna(hit_accession):
 
         res = fasta.split('\n', 1)
         name = res[0]
-        dna = res[1]
+        dna = res[1].strip('\n')
+
 
     return name, dna
 
@@ -227,6 +229,18 @@ def main():
 
     retry_count = 40
 
+    column_names = [
+            'name',
+            'dna_orig',
+            'c_name',
+            'c_dna',
+            'accession',
+            'own_score',
+            'bit-score',
+            'score',
+            'identity',
+            'hit-from',
+            'hit-to']   
     table = []
 
 
@@ -242,6 +256,7 @@ def main():
 
             # first get request id with dna sequence
             rid, et = get_rid(dna)
+            print(et)
 
             # wait for search to complete
             time.sleep(et)
@@ -255,6 +270,7 @@ def main():
 
                 if counter >= retry_count:
                     rid, et = get_rid(dna)
+                    print(et)
                     time.sleep(et)
                     counter = 0
 
@@ -272,20 +288,45 @@ def main():
             try:
                 hit = extract_best_dna(res)
                 c_name, c_dna = get_complete_dna( hit['accession'] )
+
                 table.append([name,
                             dna_orig,
-                            hit['accession'],
                             c_name,
-                            c_dna])
+                            c_dna,
+                            hit['accession'],
+                            hit['own_score'],
+                            hit['bit-score'],
+                            hit['score'],
+                            hit['identity'],
+                            hit['hit-from'],
+                            hit['hit-to']])
+
                 break
             except:
                 with open('error/error_'+name+'.xml','w') as f:
                     f.write(res)
                 print("error parsing xml")
 
-    with open(args.output, 'w') as f:
-        writer = csv.writer(f)
+
+    out_folder = args.output.strip('/')
+
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+    
+    # create csv with containing all information
+    with open(args.output + '/conv.csv', 'w') as f:
+        writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_MINIMAL)
         writer.writerows(table)
+
+    # creating weird fasta format file
+    with open(out_folder + '/fasta.txt', 'w') as f:
+        for i,row in enumerate(table):
+            for j in range(4):
+                f.write(row[j])
+                f.write('\n')
+                f.write('\n')
+
+    
 
 
 
