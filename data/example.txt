@@ -1,0 +1,4 @@
+>unknown_1
+gtaattagatccgccaatttcacagacaatactaaaatcataatagtacagctgaatgaa
+>unknown_2
+tctgtacaaattaattgtacaagacccaacaacaatacaagaaaaagtataaatatagga
