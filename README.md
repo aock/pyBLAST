@@ -1,7 +1,7 @@
 # pyBLAST
 
 ```console
-user@pc:~$ python converter.py --input data/input_file_1.txt -o dna1
+user@pc:~$ python converter.py --input data/example.txt -o dna1
 ```
 
 input file format (FASTA) for "data/example.txt":
