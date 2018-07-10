@@ -1,0 +1,12 @@
+{
+    "database":"nt",
+    "default_score":"bit-score",
+    "avoid_words":[
+        "[Cc]omplete genome",
+        "[Uu]ncultured",
+        "[Uu]nknown"
+    ],
+    "score_words":{
+        "16S.*RNA":1.5
+    }
+}

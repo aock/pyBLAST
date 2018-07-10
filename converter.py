@@ -8,32 +8,29 @@ import json
 import csv
 import xml.etree.cElementTree as ET
 import os
+import json
 
 PROGRAM = 'blastn&MEGABLAST=on'
-
-# SORT RESULTS
-sort_kw = 'bit-score'
 
 # high to low
 sort_descending = True
 
-# avoid words
-avoiding_words = ['[Cc]omplete genome',
-    '[Uu]ncultured',
-    '[Uu]nknown']
+# avoid words from config
+# avoiding_words = ['[Cc]omplete genome',
+#     '[Uu]ncultured',
+#     '[Uu]nknown']
 
-# score words (TODO Regex)
-score_words = {
-    'complete genome' : 0.1,
-    '16S.*RNA': 1.5,
-    '[Uu]ncultured': 0.0
-}
+# score words from config
+# score_words = {
+#     'complete genome' : 0.1,
+#     '16S.*RNA': 1.5,
+#     '[Uu]ncultured': 0.0
+# }
 
 
 # DATABASE = 'nt+nr'
-DATABASE = 'nt'
-
-datafolder = 'data'
+# DATABASE = 'nt'
+# database from config
 
 base_uri = 'https://blast.ncbi.nlm.nih.gov/blast/Blast.cgi'
 
@@ -67,7 +64,9 @@ pattern_query_key = r'<QueryKey>(\d+)<\/QueryKey>'
 pattern_web_env = r'<WebEnv>(\S+)<\/WebEnv>'
 
 
-def get_rid( dna_seq ):
+def get_rid( dna_seq, config ):
+
+    DATABASE = config['database']
 
     content = 'CMD=Put&PROGRAM=%s&DATABASE=%s&QUERY=%s' % (PROGRAM, DATABASE, dna_seq)
     request = base_uri + '?' + content
@@ -126,8 +125,12 @@ def name_dna(filename):
     if dna != '':
         yield name,dna,dna_orig.rstrip('\n')
 
-def extract_best_dna(xml_string):
+def extract_best_dna(xml_string, config):
     # return name, accession
+
+    sort_kw = config['default_score']
+    avoiding_words = config['avoid_words']
+    score_words = config['score_words']
 
     hit_dicts = []
 
@@ -202,12 +205,12 @@ def get_complete_dna(hit_accession):
 
     return name, dna
 
-def test_xml_parser():
+def test_xml_parser(config):
     xml_str = ''
     with open('test.xml','r') as f:
         xml_str = f.read()
 
-    name, accession = extract_best_dna(xml_str)
+    name, accession = extract_best_dna(xml_str, config)
 
     print(name)
     print(accession)
@@ -225,7 +228,15 @@ def main():
     parser = argparse.ArgumentParser(description='Process Options.')
     parser.add_argument('-i','--input', type=str, help='input filename', required=True)
     parser.add_argument('-o','--output', type=str, help='output filename', required=True)
+    parser.add_argument('-c','--config', type=str, help='config file (default: settings.json)', required=False, default='settings.json')
     args = parser.parse_args()
+
+    config = {}
+    with open(args.config,'r') as f:
+        config = json.load(f)
+
+    pprint(config)
+
 
     retry_count = 40
 
@@ -255,7 +266,7 @@ def main():
         while True:
 
             # first get request id with dna sequence
-            rid, et = get_rid(dna)
+            rid, et = get_rid(dna, config)
             print(et)
 
             # wait for search to complete
@@ -269,7 +280,7 @@ def main():
                 counter += 1
 
                 if counter >= retry_count:
-                    rid, et = get_rid(dna)
+                    rid, et = get_rid(dna, config)
                     print(et)
                     time.sleep(et)
                     counter = 0
@@ -286,7 +297,7 @@ def main():
 
             # extract best dna -> hit_accession
             try:
-                hit = extract_best_dna(res)
+                hit = extract_best_dna(res, config)
                 c_name, c_dna = get_complete_dna( hit['accession'] )
 
                 table.append([name,
