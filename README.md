@@ -8,7 +8,7 @@ Automatic matching of multiple DNA sequences with DNAs from BLAST databases via 
 </ul>
 
 ## Dependencies
-This software needs only Python3 to be installed. 
+This software requires only Python3 to be installed. 
 
 If an error occures, please check that you installed the following python packages:
 <ul>
@@ -111,3 +111,5 @@ You can defined words or regex paterns in "avoid_words". Regex patterns or even 
   <li>hit-len</li>
 </ul>
 
+## Runtime
+The match response of the BLAST-REST interface requires about 30-60sec per DNA sequence. 
