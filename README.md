@@ -4,7 +4,7 @@
 user@pc:~$ python converter.py --input data/input_file_1.txt -o dna1
 ```
 
-input file format (FASTA) for "data/input_file_1.txt":
+input file format (FASTA) for "data/example.txt":
 
 ```
 >unknown_name_1
