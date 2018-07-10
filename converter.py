@@ -1,14 +1,12 @@
 import argparse
 import glob
 import requests
-from pprint import pprint
 import re
 import time
 import json
 import csv
 import xml.etree.cElementTree as ET
 import os
-import json
 
 PROGRAM = 'blastn&MEGABLAST=on'
 
@@ -162,6 +160,7 @@ def extract_best_dna(xml_string, config):
         hit_dict['identity'] = int(scores.find('Hsp_identity').text)
         hit_dict['hit-from'] = int(scores.find('Hsp_hit-from').text)
         hit_dict['hit-to'] = int(scores.find('Hsp_hit-to').text)
+        hit_dict['hit-len'] = hit_dict['hit-to'] - hit_dict['hit-from']
 
         # SCORE
         hit_dict['own_score'] = hit_dict[sort_kw]
@@ -234,8 +233,6 @@ def main():
     config = {}
     with open(args.config,'r') as f:
         config = json.load(f)
-
-    pprint(config)
 
 
     retry_count = 40
