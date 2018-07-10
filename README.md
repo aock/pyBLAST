@@ -7,6 +7,22 @@ Automatic matching of multiple DNA sequences with DNAs from BLAST databases via 
   <li> Define keywords occurence with multiplicators </li>
 </ul>
 
+## Dependencies
+This software needs only Python3 to be installed. 
+
+If an error occures, please check that you installed the following python packages:
+<ul>
+  <li>os</li>
+  <li>argparse</li>
+  <li>glob</li>
+  <li>requests</li>
+  <li>re</li>
+  <li>time</li>
+  <li>json</li>
+  <li>csv</li>
+  <li>xml</li>
+</ul>
+
 ## Usage
 
 ```console
